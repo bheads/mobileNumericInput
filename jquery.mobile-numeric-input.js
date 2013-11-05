@@ -92,8 +92,20 @@
      * Turn a given input into a smart numeric input field
      */
     $.fn.numericInput = function() {
+        $.each(this, init);
+        return this;
+    };
+
+    /**
+     * Init
+     * @param idx unused index
+     * @param element HTMLElement to attach to
+     * @returns {*|HTMLElement}
+     */
+    function init(/* unused */ idx, element) {
         // @Todo: validate self as input[type number/text/tel]
-        var self = this;
+        var self = $(element);
+        console.log(self);
         var originalType = self.prop('type');
 
         // Create options
