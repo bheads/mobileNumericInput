@@ -1,4 +1,59 @@
+/**
+ * mobileNumericInput
+ *
+ * Forces numeric input validation/formatting on HTML input elements. This is targeted for mobile devices.
+ *
+ *   Options for each numericInput element can be set via data- tags
+ *
+ *   data-XXX               default         Comment
+ *   sep                    '.'             The sperator type
+ *   has-sep                true            Enables seperator type input, floating points
+ *   max-pre-sep            4               Digits before seperator
+ *   max-post-sep           2               Digits after seperator
+ *   min-value              5.00            Min value, on blur if value is less then min triggers minviolation and then minmaxviolation
+ *   max-value              2000.00         Max value, on blur if value is less then min triggers maxviolation and then minmaxviolation
+ *   force-type-to-text     true            On focus switch the input to type=text this stops browsers (webkit) from formatting numeric
+ *                                           inputs this, webkit causes elem.val() to return an empty string when the val is not a number
+ *                                           this prevents numericInput from cleaning up the input string.
+ *
+ *                                          On most devices the os will show the keyboard type from before the focus event, so you can show
+ *                                           the number/tel keyboard and still have the input box as text.  On blur event it is set back
+ *                                           to the original type.  Windows Mobile IE(10) will show the text keyboard, you may want to set
+ *                                           this to false on these browsers, IE does not have the empty string issue that webkit has.
+ *   next-input             null            If set to css locator string, next/go events will set focus to this element.  Go key on iOS
+ *                                           does set the focus correctly, but the keyboard is not showing, the next/prev buttons work
+ *                                           as normal
+ *
+ * numericInput can trigger these 4 events on blur, based on the min/max value validation.
+ *
+ *   event name          event param                                Comment
+ *   minviolation       { value: X, min-value: Y }                  Triggered onblur if the value is less then the min-value
+ *   maxviolation       { value: X, max-value: Y }                  Triggered onblur if the value is larger then the max-value
+ *   minmaxviolation    { value: X, min-value: Y, max-value: Z }    Triggered onblur if the value is not in the min/max value bounds, this
+ *                                                                   is triggered after minviolation or maxviolation.
+ *   valueok            { value: X, min-value: Y, max-value: Z }    Triggered onblur if the value is in the given min/max bounds
+ *
+ * Events have helper functions .minviolation() .maxviolation() .minmaxviolation() .valueok().
+ * All functions support chaining.
+ *
+ * Requires: jQuery
+ * Author: Byron Heads
+ * Date: 2013-11-05
+ */
 
+/**
+ * Example:
+ *
+ * <input type='number' name='price' class='.numeric-input' data-min-value='20.00' data-max-value='9999.99' max-pre-sep='4'/>
+ * <input type='number' name='how-many' class='.numeric-input' data-min-value='1' data-max-value='500' max-pre-sep='3' has-sep='false'/>
+ *
+ * function showInputError() { ... }
+ *
+ * $.ready(function) {
+ *      $('.numeric-input').numericInput().minmaxviolation(showInputError);
+ * }
+ *
+ */
 
 (function($){
     /**
@@ -7,7 +62,7 @@
     $.fn.numericInput = function() {
         // @Todo: validate self as input[type number/text/tel]
         var self = this;
-        var originalType;
+        var originalType = self.prop('type');
 
         // Create options
         var opts = {};
@@ -20,8 +75,9 @@
         opts.maxPost = (self.data('max-post-sep') || 2);
         opts.minValue = (self.data('min-value') || 5.00);
         opts.maxValue = (self.data('max-value') || 2000.00);
-        // @Todo: windows mobile should not switch to type=text: it shows the text keyboard and not the number/tel keyboard
+        // @Todo: windows mobile / ios should not switch to type=text: it shows the text keyboard and not the number/tel keyboard
         opts.forceTextType = (self.data('force-type-to-text') || true);
+        opts.nextInput = (self.data('next-input') || null);
 
         // Test digit
         var isDigit = function(ch) {
@@ -30,11 +86,18 @@
 
         // Change to type text
         self.focus(function() {
-            originalType = self.prop('type');
-
-            // browsers like webkit try to process number input fields, this causes val() to return an empty string on non-number values
-            if(opts.forceTextType && originalType !== 'text') {
+             // browsers like webkit try to process number input fields, this causes val() to return an empty string on non-number values
+            if(opts.forceTextType) {
                 self.prop('type', 'text');
+            }
+        });
+
+        /**
+         * Handle the next key to set the focus to a given element
+         */
+        self.keydown(function (event)  {
+            if(typeof(opts.nextInput) === 'string' && event.keyCode == 13) {
+                $(opts.nextInput).focus().trigger('click', {});
             }
         });
 
@@ -78,7 +141,12 @@
                 }
             }
 
-            // Add leading zero
+            // remove leading zero
+            while(ret.length && ret.charAt(0) === '0') {
+                ret = ret.substr(1);
+            }
+
+            // Add leading zero if starts with sep
             if(ret.length && ret.charAt(0) === opts.sep) {
                 ret = '0' + ret;
             }
@@ -87,13 +155,6 @@
             if(ret !== orig) {
                 self.val(ret);
             }
-
-            // Stop default
-            event.preventDefault();
-            event.stopPropagation();
-
-            // Return this to allow chaining
-            return self;
         });
 
         // Check for min and max values, fire an event if the value is out of range
@@ -117,47 +178,49 @@
             }
 
             // reset type value if needed
-            if(opts.forceTextType && originalType !== self.prop('type')) {
+            if(opts.forceTextType) {
                 self.prop('type', originalType);
             }
         });
 
-        // Event handlers
+        return self;
+    };
 
-        // Min value violation
-        $.fn.minviolation = function(fn) {
-            var self = this;
+    // Event handlers
 
-            self.on('minviolation', fn);
+    // Min value violation
+    $.fn.minviolation = function(fn) {
+        var self = this;
 
-            return self;
-        };
+        self.on('minviolation', fn);
 
-        // Max value violation
-        $.fn.maxviolation = function(fn) {
-            var self = this;
+        return self;
+    };
 
-            self.on('maxviolation', fn);
+    // Max value violation
+    $.fn.maxviolation = function(fn) {
+        var self = this;
 
-            return self;
-        };
+        self.on('maxviolation', fn);
 
-        // Min/Max value violation, fired after either min or max violation events
-        $.fn.minmaxviolation = function(fn) {
-            var self = this;
+        return self;
+    };
 
-            self.on('minmaxviolation', fn);
+    // Min/Max value violation, fired after either min or max violation events
+    $.fn.minmaxviolation = function(fn) {
+        var self = this;
 
-            return self;
-        };
+        self.on('minmaxviolation', fn);
 
-        // input passes min/max value tests
-        $.fn.valueok = function(fn) {
-            var self = this;
+        return self;
+    };
 
-            self.on('valueok', fn);
+    // input passes min/max value tests
+    $.fn.valueok = function(fn) {
+        var self = this;
 
-            return self;
-        };
+        self.on('valueok', fn);
+
+        return self;
     };
 }(jQuery));
