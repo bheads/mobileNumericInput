@@ -38,7 +38,9 @@ Example:
 ```
 
 ```javascript
-function showInputError() { ... }
+function showInputError(args) {
+	alert(args.value + " is not valid, should be between " + args.min-value + " and " + arg.max-value);
+}
 
 $.ready(function) {
      $('.numeric-input').numericInput().minmaxviolation(showInputError);
