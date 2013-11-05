@@ -105,7 +105,6 @@
     function init(/* unused */ idx, element) {
         // @Todo: validate self as input[type number/text/tel]
         var self = $(element);
-        console.log(self);
         var originalType = self.prop('type');
 
         // Create options
