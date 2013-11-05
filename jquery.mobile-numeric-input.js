@@ -79,7 +79,9 @@
  * <input type='number' name='price' class='.numeric-input' data-min-value='20.00' data-max-value='9999.99' max-pre-sep='4'/>
  * <input type='number' name='how-many' class='.numeric-input' data-min-value='1' data-max-value='500' max-pre-sep='3' has-sep='false'/>
  *
- * function showInputError() { ... }
+ * function showInputError(args) {
+ *     alert(args.value + " is not valid, should be between " + args.min-value + " and " + arg.max-value);
+ * }
  *
  * $.ready(function) {
  *      $('.numeric-input').numericInput().minmaxviolation(showInputError);
@@ -209,15 +211,15 @@
             // Check min and max values
             if(value < opts.minValue) {
                 // Fire min event
-                self.trigger('minviolation', { 'value': value, 'min-value': opts.minValue });
-                self.trigger('minmaxviolation', { 'value': value, 'min-value': opts.minValue, 'max-value': opts.maxValue });
+                self.trigger({ type: 'minviolation', 'value': value, 'min-value': opts.minValue });
+                self.trigger({ type: 'minmaxviolation', 'value': value, 'min-value': opts.minValue, 'max-value': opts.maxValue });
             } else if(opts.maxValue < value ){
                 // Fire max Event Here
-                self.trigger('maxviolation', { 'value': value, 'max-value': opts.maxValue });
-                self.trigger('minmaxviolation', { 'value': value, 'min-value': opts.minValue, 'max-value': opts.maxValue });
+                self.trigger({ type: 'maxviolation', 'value': value, 'max-value': opts.maxValue });
+                self.trigger({ type: 'minmaxviolation', 'value': value, 'min-value': opts.minValue, 'max-value': opts.maxValue });
             } else {
                 // Fire
-                self.trigger('valueok', { 'value': value, 'min-value': opts.minValue, 'max-value': opts.maxValue });
+                self.trigger({ type: 'valueok', 'value': value, 'min-value': opts.minValue, 'max-value': opts.maxValue });
             }
 
             // reset type value if needed
